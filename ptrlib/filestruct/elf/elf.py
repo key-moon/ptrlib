@@ -78,7 +78,11 @@ class ELF(object):
         else:
             return 0
 
-    def symbol(self, name: Union[str, bytes]) -> Optional[int]:
+    @overload
+    def symbol(self, name: Union[str, bytes], raise_error: Literal[True]=True) -> int: ...
+    @overload
+    def symbol(self, name: Union[str, bytes], raise_error: bool=False) -> Optional[int]: ...
+    def symbol(self, name: Union[str, bytes], raise_error: bool=False) -> Optional[int]:
         """Get the address of a symbol
 
         Find the address corresponding to a given symbol.
@@ -91,6 +95,7 @@ class ELF(object):
         """
         offset = self._offset_symbol(name)
         if offset is None:
+            if raise_error: raise Exception("Symbol Not Found")
             return None
         else:
             return self._pie_add_base + offset
@@ -185,7 +190,11 @@ class ELF(object):
         for result in self.search(pattern, writable, executable):
             yield result
 
-    def plt(self, name: Union[str, bytes]) -> Optional[int]:
+    @overload
+    def plt(self, name: Union[str, bytes], raise_error: Literal[True]=True) -> int: ...
+    @overload
+    def plt(self, name: Union[str, bytes], raise_error: bool=False) -> Optional[int]: ...
+    def plt(self, name: Union[str, bytes], raise_error: bool=False) -> Optional[int]:
         """Get a PLT address
         Lookup the PLT table and find the corresponding address
 
@@ -197,6 +206,7 @@ class ELF(object):
         """
         offset = self._offset_plt(name)
         if offset is None:
+            if raise_error: raise Exception("PLT Entry Not Found")
             return None
         else:
             return self._pie_add_base + offset
@@ -262,7 +272,11 @@ class ELF(object):
 
         return xref
 
-    def got(self, name: Union[str, bytes]) -> Optional[int]:
+    @overload
+    def got(self, name: Union[str, bytes], raise_error: Literal[True]=True) -> int: ...
+    @overload
+    def got(self, name: Union[str, bytes], raise_error: bool=False) -> Optional[int]: ...
+    def got(self, name: Union[str, bytes], raise_error: bool=False) -> Optional[int]:
         """Get a GOT address
         Lookup the GOT table and find the corresponding address
 
@@ -274,6 +288,7 @@ class ELF(object):
         """
         offset = self._offset_got(name)
         if offset is None:
+            if raise_error: raise Exception("GOT Entry Not Found")
             return None
         else:
             return self._pie_add_base + offset
@@ -297,7 +312,11 @@ class ELF(object):
 
         return None
 
-    def main_arena(self) -> Optional[int]:
+    @overload
+    def main_arena(self, raise_error: Literal[True]=True) -> int: ...
+    @overload
+    def main_arena(self, raise_error: bool=False) -> Optional[int]: ...
+    def main_arena(self, raise_error: bool=False) -> Optional[int]:
         """Find main_arena offset
 
         Returns:
@@ -305,7 +324,10 @@ class ELF(object):
         """
         offset = self._offset_main_arena()
         if offset is None:
-            logger.warning('`main_arena` only works for libc binary.')
+            if raise_error:
+                raise Exception("`main_arena` only works for libc binary.")
+            else:
+                logger.warning('`main_arena` only works for libc binary.')
             return None
         else:
             return self._pie_add_base + offset
@@ -337,7 +359,11 @@ class ELF(object):
             else:
                 return ofs_tzname - 0x8a0
 
-    def section(self, name: str) -> Optional[int]:
+    @overload
+    def section(self, name: str, raise_error: Literal[True]=True) -> int: ...
+    @overload
+    def section(self, name: str, raise_error: bool=False) -> Optional[int]: ...
+    def section(self, name: str, raise_error: bool=False) -> Optional[int]:
         """Get a section by name
 
         Lookup and find a section by name and return the address.
@@ -350,6 +376,7 @@ class ELF(object):
         """
         offset = self._offset_section(name)
         if offset is None:
+            if raise_error: raise Exception("Section Not Found")
             return None
         else:
             return self._pie_add_base + offset

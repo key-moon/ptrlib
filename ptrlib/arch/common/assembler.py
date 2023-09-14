@@ -3,21 +3,39 @@ import os
 import subprocess
 import tempfile
 from logging import getLogger
-from typing import Optional, Union
+from typing import Literal, Optional, Union, overload
 from ptrlib.arch.intel import assemble_intel, is_arch_intel, bit_by_arch_intel
 from ptrlib.arch.arm   import assemble_arm, is_arch_arm, bit_by_arch_arm
 from ptrlib.binary.encoding import *
 
 logger = getLogger(__name__)
 
-
+@overload
 def assemble(code: Union[str, bytes],
              bits: Optional[int]=None,
              arch: str='x86-64',
              syntax: str='intel',
              entry: Optional[str]=None,
              gcc_path: Optional[str]=None,
-             objcopy_path: Optional[str]=None) -> Optional[bytes]:
+             objcopy_path: Optional[str]=None,
+             raise_error: Literal[True]=True) -> bytes: ...
+@overload
+def assemble(code: Union[str, bytes],
+             bits: Optional[int]=None,
+             arch: str='x86-64',
+             syntax: str='intel',
+             entry: Optional[str]=None,
+             gcc_path: Optional[str]=None,
+             objcopy_path: Optional[str]=None,
+             raise_error: Literal[False]=False) -> Optional[bytes]: ...
+def assemble(code: Union[str, bytes],
+             bits: Optional[int]=None,
+             arch: str='x86-64',
+             syntax: str='intel',
+             entry: Optional[str]=None,
+             gcc_path: Optional[str]=None,
+             objcopy_path: Optional[str]=None,
+             raise_error: bool=False) -> Optional[bytes]:
     """Assemble code with GCC
 
     Args:
@@ -48,13 +66,13 @@ def assemble(code: Union[str, bytes],
         if bits is None:
             bits = bit_by_arch_intel(arch)
             if bits == -1: bits = 64
-        return assemble_intel(code, bits, entry, gcc_path, objcopy_path)
+        return assemble_intel(code, bits, entry, gcc_path, objcopy_path, raise_error)
 
     elif is_arch_arm(arch):
         if bits is None:
             bits = bit_by_arch_arm(arch)
             if bits == -1: bits = 64
-        return assemble_arm(code, bits, entry, gcc_path, objcopy_path)
+        return assemble_arm(code, bits, entry, gcc_path, objcopy_path, raise_error)
 
     else:
         raise ValueError("Unknown architecture '{}'".format(arch))
@@ -80,6 +98,8 @@ def nasm(code: Union[str, bytes],
     from ptrlib.arch.common import which
     if nasm_path is None:
         nasm_path = which('nasm')
+    if nasm_path is None:
+        raise FileNotFoundError("Install 'nasm', or specify path to them.")
 
     if isinstance(code, str):
         code = str2bytes(code)

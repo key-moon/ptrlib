@@ -4,16 +4,32 @@ import platform
 import subprocess
 import tempfile
 from logging import getLogger
-from typing import Optional
+from typing import Literal, Optional, overload
+
+from ..util import severe_error
 
 logger = getLogger(__name__)
 
-
+@overload
 def __int_assemble_intel(code: bytes,
                          bits: int,
                          entry: str,
                          gcc_path: Optional[str]=None,
-                         objcopy_path: Optional[str]=None) -> Optional[bytes]:
+                         objcopy_path: Optional[str]=None,
+                         raise_error: Literal[True]=True) -> bytes: ...
+@overload
+def __int_assemble_intel(code: bytes,
+                         bits: int,
+                         entry: str,
+                         gcc_path: Optional[str]=None,
+                         objcopy_path: Optional[str]=None,
+                         raise_error: bool=False) -> Optional[bytes]: ...
+def __int_assemble_intel(code: bytes,
+                         bits: int,
+                         entry: str,
+                         gcc_path: Optional[str]=None,
+                         objcopy_path: Optional[str]=None,
+                         raise_error: bool=False) -> Optional[bytes]:
     from ptrlib.arch.common import which
     from .archname import is_arch_intel
 
@@ -46,17 +62,17 @@ def __int_assemble_intel(code: bytes,
         cmd = [gcc_path, '-nostdlib', '-c', fname_s, '-o', fname_o]
         cmd.append('-Wl,--entry={}'.format(entry))
         if subprocess.Popen(cmd).wait() != 0:
-            logger.warning("Assemble failed")
             os.unlink(fname_s)
-            return
+            severe_error("Assemble failed", logger, raise_error)
+            return None
 
         # Extract
         cmd = [objcopy_path, '-O', 'binary', '-j', '.text', fname_o, fname_bin]
         if subprocess.Popen(cmd).wait() != 0:
-            logger.warning("Extract failed")
             os.unlink(fname_s)
             os.unlink(fname_o)
-            return
+            severe_error("Extract failed", logger, raise_error)
+            return None
 
         with open(fname_bin, 'rb') as f:
             output = f.read()
@@ -67,11 +83,26 @@ def __int_assemble_intel(code: bytes,
 
         return output
 
+@overload
 def assemble_intel(code: bytes,
                    bits: int,
                    entry: str,
                    gcc_path: Optional[str]=None,
-                   objcopy_path: Optional[str]=None) -> Optional[bytes]:
+                   objcopy_path: Optional[str]=None,
+                   raise_error: Literal[True]=True) -> bytes: ...
+@overload
+def assemble_intel(code: bytes,
+                   bits: int,
+                   entry: str,
+                   gcc_path: Optional[str]=None,
+                   objcopy_path: Optional[str]=None,
+                   raise_error: bool=False) -> Optional[bytes]: ...
+def assemble_intel(code: bytes,
+                   bits: int,
+                   entry: str,
+                   gcc_path: Optional[str]=None,
+                   objcopy_path: Optional[str]=None,
+                   raise_error: bool=False) -> Optional[bytes]:
     """Assemble code to intel machine code
 
     Args:
